@@ -9,6 +9,7 @@ import remarkGfm from 'remark-gfm'
 import { useChartStore, useSettingsStore, useContentCacheStore } from '@/stores'
 import { streamChat, type ChatMessage, type LLMConfig } from '@/lib/llm'
 import { extractKnowledge, buildPromptContext } from '@/knowledge'
+import { buildGuidancePromptContext } from '@/knowledge-db'
 import { Button, Select } from '@/components/ui'
 
 /* ------------------------------------------------------------
@@ -212,6 +213,11 @@ export function YearlyFortune() {
       // 提取本命盘完整信息
       const knowledge = extractKnowledge(chart, birthInfo.year)
       const natalContext = buildPromptContext(knowledge)
+      const guidanceContext = buildGuidancePromptContext({
+        knowledge,
+        task: 'yearly',
+        limit: 14,
+      })
 
       // 构建流年盘信息
       const yearlyContext = buildYearlyContext(chart, horoscope, year)
@@ -227,6 +233,8 @@ export function YearlyFortune() {
 ${natalContext}
 
 ${yearlyContext}
+
+${guidanceContext}
 
 请结合本命盘和流年盘信息，给出详细的 ${year} 年运势分析。`
 

@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/stores'
 import { generateChart, getShichenOptions, type BirthInfo, type Gender } from '@/lib/astro'
 import { clampDayToMonth, getDayOptions, getMonthOptions, getYearOptions } from '@/lib/birth-date'
 import { extractKnowledge, buildPromptContext } from '@/knowledge'
+import { buildGuidancePromptContext } from '@/knowledge-db'
 import { streamChat, type ChatMessage, type LLMConfig } from '@/lib/llm'
 import { Button, Select } from '@/components/ui'
 
@@ -233,6 +234,16 @@ export function MatchAnalysis() {
       const knowledge2 = extractKnowledge(chart2, person2.year)
       const context1 = buildPromptContext(knowledge1)
       const context2 = buildPromptContext(knowledge2)
+      const guidance1 = buildGuidancePromptContext({
+        knowledge: knowledge1,
+        task: 'match',
+        limit: 8,
+      })
+      const guidance2 = buildGuidancePromptContext({
+        knowledge: knowledge2,
+        task: 'match',
+        limit: 8,
+      })
 
       const userMessage = `请分析以下两人的命盘契合度：
 
@@ -243,12 +254,16 @@ export function MatchAnalysis() {
 
 ${context1}
 
+${guidance1}
+
 ## 第二人
 - 出生：${person2.year}年${person2.month}月${person2.day}日
 - 性别：${person2.gender === 'male' ? '男' : '女'}
 - 五行局：${chart2.fiveElementsClass}
 
 ${context2}
+
+${guidance2}
 
 请分析两人的契合度和相处建议。`
 

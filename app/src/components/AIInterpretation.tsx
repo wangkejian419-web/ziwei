@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useChartStore, useSettingsStore, useContentCacheStore } from '@/stores'
 import { extractKnowledge, buildPromptContext } from '@/knowledge'
+import { buildGuidancePromptContext } from '@/knowledge-db'
 import { streamChat, type ChatMessage, type LLMConfig } from '@/lib/llm'
 import { Button } from '@/components/ui'
 
@@ -200,6 +201,11 @@ export function AIInterpretation() {
       // 提取知识上下文
       const knowledge = extractKnowledge(chart, birthInfo.year)
       const contextStr = buildPromptContext(knowledge)
+      const guidanceContext = buildGuidancePromptContext({
+        knowledge,
+        task: 'natal',
+        limit: 12,
+      })
 
       // 构建用户消息
       const userMessage = `请解读以下命盘：
@@ -210,6 +216,8 @@ export function AIInterpretation() {
 - 五行局：${chart.fiveElementsClass}
 
 ${contextStr}
+
+${guidanceContext}
 
 请给出详细但通俗易懂的命盘解读。`
 

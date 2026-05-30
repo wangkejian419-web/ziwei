@@ -15,6 +15,7 @@
 
 import type FunctionalAstrolabe from 'iztro/lib/astro/FunctionalAstrolabe'
 import { extractKnowledge } from '../knowledge'
+import { buildGuidancePromptContext } from '../knowledge-db'
 import { chat, type LLMConfig } from './llm'
 
 /* ============================================================
@@ -1218,6 +1219,11 @@ function buildKLineUserPrompt(
   birthYear: number
 ): string {
   const knowledge = extractKnowledge(chart, birthYear)
+  const guidanceContext = buildGuidancePromptContext({
+    knowledge,
+    task: 'kline',
+    limit: 8,
+  })
 
   // 格式化十二宫信息
   const palacesInfo = knowledge.十二宫.map(p => {
@@ -1269,6 +1275,8 @@ ${decadalsInfo}
 
 ## 近期流年（参考）
 ${yearsInfo}
+
+${guidanceContext}
 
 请生成 100 年的 K 线数据 JSON。`
 }
