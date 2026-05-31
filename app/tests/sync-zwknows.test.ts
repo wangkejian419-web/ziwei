@@ -15,6 +15,8 @@ describe('sync-zwknows workflow', () => {
   it('pushes main to the deployment repository with the configured token', () => {
     expect(workflow).toContain('ruijayfeng/zwknows.git')
     expect(workflow).toContain('secrets.ZWKNOWS_SYNC_TOKEN')
+    expect(workflow).toContain('git fetch zwknows-sync main')
+    expect(workflow).toContain('--force-with-lease=refs/heads/main:${EXPECTED_ZWKNOWS_HEAD}')
     expect(workflow).toContain('HEAD:main')
   })
 })

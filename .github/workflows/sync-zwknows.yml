@@ -31,4 +31,6 @@ jobs:
           fi
 
           git remote add zwknows-sync "https://x-access-token:${ZWKNOWS_SYNC_TOKEN}@github.com/ruijayfeng/zwknows.git"
-          git push --force-with-lease zwknows-sync HEAD:main
+          git fetch zwknows-sync main
+          EXPECTED_ZWKNOWS_HEAD="$(git rev-parse FETCH_HEAD)"
+          git push --force-with-lease=refs/heads/main:${EXPECTED_ZWKNOWS_HEAD} zwknows-sync HEAD:main
