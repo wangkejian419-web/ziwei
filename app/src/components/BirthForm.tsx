@@ -2,10 +2,11 @@
    生辰输入表单 - 高级玻璃态设计
    ============================================================ */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
 import { generateChart, getShichenOptions, type BirthInfo, type Gender } from '@/lib/astro'
 import { clampDayToMonth, getDayOptions, getMonthOptions, getYearOptions } from '@/lib/birth-date'
+import { findBirthplaceAsync, resolveBirthTimeAsync, type Birthplace } from '@/lib/true-solar-time'
 import { useChartStore } from '@/stores'
 
 const YEAR_OPTIONS = getYearOptions()
@@ -25,9 +26,37 @@ export function BirthForm() {
   const [day, setDay] = useState(1)
   const [hour, setHour] = useState(12)
   const [gender, setGender] = useState<Gender>('male')
+  const [birthplace, setBirthplace] = useState('')
+  const [trueSolarEnabled, setTrueSolarEnabled] = useState(true)
+  const [matchedBirthplace, setMatchedBirthplace] = useState<Birthplace | null>(null)
+  const [matchingBirthplace, setMatchingBirthplace] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const dayOptions = getDayOptions(year, month)
+
+  useEffect(() => {
+    let active = true
+    const trimmedBirthplace = birthplace.trim()
+
+    if (!trueSolarEnabled || !trimmedBirthplace) {
+      setMatchedBirthplace(null)
+      setMatchingBirthplace(false)
+      return
+    }
+
+    setMatchingBirthplace(true)
+    findBirthplaceAsync(trimmedBirthplace)
+      .then((place) => {
+        if (active) setMatchedBirthplace(place)
+      })
+      .finally(() => {
+        if (active) setMatchingBirthplace(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [birthplace, trueSolarEnabled])
 
   const handleYearChange = (nextYear: number) => {
     setYear(nextYear)
@@ -39,13 +68,30 @@ export function BirthForm() {
     setDay((currentDay) => clampDayToMonth(year, nextMonth, currentDay))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
       const safeDay = clampDayToMonth(year, month, day)
-      const birthInfo: BirthInfo = { year, month, day: safeDay, hour, gender }
+      const resolvedBirthTime = await resolveBirthTimeAsync({
+        year,
+        month,
+        day: safeDay,
+        hour,
+        birthplace,
+        enabled: trueSolarEnabled,
+      })
+      const birthInfo: BirthInfo = {
+        year,
+        month,
+        day: safeDay,
+        hour,
+        gender,
+        birthplace: birthplace.trim() || undefined,
+        trueSolarEnabled,
+        resolvedBirthTime,
+      }
       const chart = generateChart(birthInfo)
 
       setBirthInfo(birthInfo)
@@ -182,8 +228,41 @@ export function BirthForm() {
         <Input
           label="出生地（可选）"
           placeholder="如：北京、成都、乌鲁木齐"
-          hint="用于真太阳时校正，可提高准确度"
+          hint={
+            trueSolarEnabled
+              ? matchingBirthplace
+                ? '正在匹配出生地'
+                : matchedBirthplace
+                ? `已匹配 ${matchedBirthplace.name}，系统会自动校正真太阳时`
+                : birthplace.trim()
+                  ? '暂未匹配该出生地，将按原时辰排盘'
+                  : '直接输入出生地，系统会在后台自动匹配'
+              : '已关闭真太阳时校正'
+          }
+          value={birthplace}
+          onChange={(e) => setBirthplace(e.target.value)}
         />
+
+        <label
+          className="
+            flex items-center justify-between gap-4 rounded-xl
+            bg-white/[0.04] border border-white/[0.08]
+            px-4 py-3 cursor-pointer
+          "
+        >
+          <span>
+            <span className="block text-sm text-text-secondary font-medium">自动真太阳时校正</span>
+            <span className="block text-xs text-text-muted mt-0.5">
+              根据出生地自动处理，普通用户无需填写经纬度
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={trueSolarEnabled}
+            onChange={(e) => setTrueSolarEnabled(e.target.checked)}
+            className="h-5 w-5 accent-star"
+          />
+        </label>
 
         {/* 分隔线 */}
         <div className="relative py-2">

@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { useChartStore } from '@/stores'
-import type { FunctionalAstrolabe } from '@/lib/astro'
+import type { BirthInfo, FunctionalAstrolabe } from '@/lib/astro'
 
 /* ------------------------------------------------------------
    十二宫位置映射
@@ -221,12 +221,16 @@ interface CenterInfoProps {
   chart: FunctionalAstrolabe
   solarDate: string
   gender: string
+  birthInfo: BirthInfo
 }
 
-function CenterInfo({ chart, solarDate, gender }: CenterInfoProps) {
+function CenterInfo({ chart, solarDate, gender, birthInfo }: CenterInfoProps) {
   // 计算年柱纳音
   const yearGanZhi = chart.chineseDate?.split(' ')[0] || ''
   const nayin = getNayin(yearGanZhi)
+  const resolvedTime = birthInfo.resolvedBirthTime
+  const showCorrection = birthInfo.trueSolarEnabled && resolvedTime?.applied
+  const showUnmatched = birthInfo.trueSolarEnabled && birthInfo.birthplace && !resolvedTime?.applied
 
   return (
     <div className="
@@ -254,6 +258,23 @@ function CenterInfo({ chart, solarDate, gender }: CenterInfoProps) {
         <p><span className="text-text-muted">农历</span> <span className="text-text">{chart.lunarDate}</span></p>
         <p><span className="text-text-muted">干支</span> <span className="text-text font-mono">{chart.chineseDate}</span></p>
         <p><span className="text-text-muted">时辰</span> <span className="text-text">{chart.time} {chart.timeRange}</span></p>
+        {showCorrection && resolvedTime && (
+          <p>
+            <span className="text-text-muted">真太阳时</span>{' '}
+            <span className="text-gold">
+              {resolvedTime.location?.name} {formatTime(resolvedTime.hour, resolvedTime.minute)}
+              {resolvedTime.originalShichen !== resolvedTime.correctedShichen
+                ? `，${resolvedTime.originalShichen}校正为${resolvedTime.correctedShichen}`
+                : '，时辰不变'}
+            </span>
+          </p>
+        )}
+        {showUnmatched && (
+          <p>
+            <span className="text-text-muted">真太阳时</span>{' '}
+            <span className="text-text-muted">未匹配出生地，按原时辰排盘</span>
+          </p>
+        )}
         <p><span className="text-text-muted">性别</span> <span className="text-text">{gender}</span></p>
         {nayin && (
           <p><span className="text-text-muted">纳音</span> <span className="text-gold">{nayin}</span></p>
@@ -282,6 +303,10 @@ function CenterInfo({ chart, solarDate, gender }: CenterInfoProps) {
       </div>
     </div>
   )
+}
+
+function formatTime(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
 }
 
 /* ------------------------------------------------------------
@@ -377,7 +402,7 @@ export function ChartDisplay() {
         {/* Row 1: left + center(2x2) + right */}
         {renderPalace(grid[1][0], '1-0')}
         <div className="col-span-2 row-span-2">
-          <CenterInfo chart={chart} solarDate={solarDate} gender={gender} />
+          <CenterInfo chart={chart} solarDate={solarDate} gender={gender} birthInfo={birthInfo} />
         </div>
         {renderPalace(grid[1][3], '1-3')}
 

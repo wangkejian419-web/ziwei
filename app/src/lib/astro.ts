@@ -12,6 +12,7 @@
 
 import { astro } from 'iztro'
 import type FunctionalAstrolabe from 'iztro/lib/astro/FunctionalAstrolabe'
+import { resolveBirthTime, type ResolvedBirthTime } from './true-solar-time'
 
 /* ------------------------------------------------------------
    全局配置初始化 - 文墨天机标准
@@ -33,19 +34,11 @@ export interface BirthInfo {
   day: number
   hour: number
   gender: Gender
+  birthplace?: string
+  trueSolarEnabled?: boolean
+  resolvedBirthTime?: ResolvedBirthTime
   isLeapMonth?: boolean
   fixLeap?: boolean
-}
-
-/* ------------------------------------------------------------
-   时辰索引转换
-   iztro 时辰: 0=早子(00-01), 1=丑, ..., 11=亥, 12=晚子(23-00)
-   ------------------------------------------------------------ */
-
-function hourToTimeIndex(hour: number): number {
-  if (hour === 23) return 12        // 晚子时 23:00-00:00
-  if (hour >= 0 && hour < 1) return 0  // 早子时 00:00-01:00
-  return Math.floor((hour + 1) / 2)
 }
 
 /* ------------------------------------------------------------
@@ -53,10 +46,18 @@ function hourToTimeIndex(hour: number): number {
    ------------------------------------------------------------ */
 
 export function generateChart(info: BirthInfo): FunctionalAstrolabe {
-  const { year, month, day, hour, gender, fixLeap = true } = info
+  const { gender, fixLeap = true } = info
+  const resolvedTime = info.resolvedBirthTime ?? resolveBirthTime({
+    year: info.year,
+    month: info.month,
+    day: info.day,
+    hour: info.hour,
+    birthplace: info.birthplace,
+    enabled: info.trueSolarEnabled ?? true,
+  })
 
-  const dateStr = `${year}-${month}-${day}`
-  const timeIndex = hourToTimeIndex(hour)
+  const dateStr = `${resolvedTime.year}-${resolvedTime.month}-${resolvedTime.day}`
+  const timeIndex = resolvedTime.timeIndex
   const genderName = gender === 'male' ? '男' : '女'
 
   return astro.bySolar(dateStr, timeIndex, genderName, fixLeap)
